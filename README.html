@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Install Watcher &mdash; Watcher 3.1.0 documentation</title>
+  <title>Install Watcher &mdash; Watcher 3.2.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -14,7 +14,7 @@
     <link rel="shortcut icon" href="_static/Watcher-favicon.ico"/>
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=dd1205ac"></script>
+      <script src="_static/documentation_options.js?v=eb155f5e"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -86,6 +86,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#api-key-creation-management">API Key Creation &amp; Management</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pagination">Pagination</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#specific-details">Specific Details</a></li>
 </ul>
 </li>
@@ -591,15 +592,46 @@ docker compose up
 <li><p>Click on <strong>SAVE</strong>.</p></li>
 </ul>
 <p>You must pass your API keys via the Authorization header. It should be formatted as follows: <strong><code class="docutils literal notranslate"><span class="pre">Authorization:</span> <span class="pre">Token</span> <span class="pre">&lt;API_KEY&gt;</span></code></strong> where <strong>&lt;API_KEY&gt;</strong> refers to the full generated API key.</p>
-<p>Below, you will find our 4 modules with their API functions:</p>
+<section id="pagination">
+<h3>Pagination<a class="headerlink" href="#pagination" title="Link to this heading"></a></h3>
+<p><strong>Usage Examples:</strong></p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get first page with default size (100 items)</span>
+GET<span class="w"> </span>/api/data_leak/keyword/
+
+<span class="c1"># Get specific page</span>
+GET<span class="w"> </span>/api/data_leak/keyword/?page<span class="o">=</span><span class="m">2</span>
+
+<span class="c1"># Customize page size (between 1 and 1000)</span>
+GET<span class="w"> </span>/api/data_leak/keyword/?page<span class="o">=</span><span class="m">1</span><span class="p">&amp;</span><span class="nv">page_size</span><span class="o">=</span><span class="m">50</span>
+
+<span class="c1"># Maximum page size</span>
+GET<span class="w"> </span>/api/data_leak/keyword/?page<span class="o">=</span><span class="m">1</span><span class="p">&amp;</span><span class="nv">page_size</span><span class="o">=</span><span class="m">1000</span>
+</pre></div>
+</div>
+<p><strong>Response Fields:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">count</span></code>: Total number of items across all pages</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">next</span></code>: URL to the next page (null if last page)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">previous</span></code>: URL to the previous page (null if first page)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">results</span></code>: Array containing the actual items for the current page</p></li>
+</ul>
+<p><strong>Notes:</strong></p>
+<ul class="simple">
+<li><p>Pagination is implemented across all major API endpoints</p></li>
+<li><p>Default page size is 100 items</p></li>
+<li><p>Maximum page size is 1000 items</p></li>
+<li><p>Most frontend actions (DataLeak.js, DnsFinder.js, etc.) are compatible with this pagination system. Note: Threats Watcher module does not support pagination.</p></li>
+</ul>
+<p>Below, you will find our 5 modules with their API functions:</p>
 <details>
 <summary>Threats Watcher</summary>  <br>
 <p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/trendyword/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of trending words monitored by the application.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of trending words monitored by the application.</p></li>
 <li><p><strong>POST:</strong> Adds a new trending word to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing trending word in the monitored list.</p></li>
 <li><p><strong>DELETE:</strong> Removes a trending word from the monitored list.</p></li>
@@ -610,9 +642,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/bannedword/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of banned words monitored by the application.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of banned words monitored by the application.</p></li>
 <li><p><strong>POST:</strong> Adds a new banned word to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing banned word in the monitored list.</p></li>
 <li><p><strong>DELETE:</strong> Removes a banned word from the monitored list.</p></li>
@@ -626,9 +659,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/data_leak/keyword/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of keywords monitored for data leaks.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of keywords monitored for data leaks.</p></li>
 <li><p><strong>POST:</strong> Adds a new keyword to the monitored list for data leaks.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing keyword in the monitored list for data leaks.</p></li>
 <li><p><strong>DELETE:</strong> Removes a keyword from the monitored list for data leaks.</p></li>
@@ -639,9 +673,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/data_leak/alert/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of alerts related to data leaks.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of alerts related to data leaks.</p></li>
 <li><p><strong>POST:</strong> Adds a new alert for data leaks.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing alert for data leaks.</p></li>
 <li><p><strong>DELETE:</strong> Removes an alert related to data leaks.</p></li>
@@ -655,9 +690,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/site_monitoring/site/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of sites monitored by the application.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of sites monitored by the application.</p></li>
 <li><p><strong>POST:</strong> Adds a new site to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing site in the monitored list.</p></li>
 <li><p><strong>DELETE:</strong> Removes a site from the monitored list.</p></li>
@@ -668,9 +704,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/site_monitoring/alert/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of alerts related to site monitoring.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of alerts related to site monitoring.</p></li>
 <li><p><strong>POST:</strong> Adds a new alert related to site monitoring.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing alert related to site monitoring.</p></li>
 <li><p><strong>DELETE:</strong> Removes an alert related to site monitoring.</p></li>
@@ -681,12 +718,24 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/site_monitoring/misp/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> POST</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>POST:</strong> Adds a new integration with MISP.</p></li>
+<li><p><strong>POST:</strong> Exports a monitored site to MISP threat intelligence platform.</p></li>
 </ul>
 </li>
-<li><p><strong>Usage:</strong> Used to get, add, update, or delete current integrations with MISP.</p></li>
+<li><p><strong>Usage:</strong> Used to integrate site monitoring data with MISP.</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">^api/site_monitoring/site/statistics/$</span></code></p>
+<ul class="simple">
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
+<li><p><strong>Description:</strong></p>
+<ul>
+<li><p><strong>GET:</strong> Returns aggregated statistics for site monitoring (total sites, malicious count, takedown requests, legal team cases).</p></li>
+</ul>
+</li>
+<li><p><strong>Usage:</strong> Used to display dashboard statistics.</p></li>
 </ul>
 </details> <br>
 <details>
@@ -694,9 +743,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/dns_finder/dns_monitored/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of monitored DNS domains.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of monitored DNS domains.</p></li>
 <li><p><strong>POST:</strong> Adds a new DNS domain to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing monitored DNS domain.</p></li>
 <li><p><strong>DELETE:</strong> Removes a DNS domain from the monitored list.</p></li>
@@ -707,9 +757,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/dns_finder/keyword_monitored/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of monitored DNS keywords.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of monitored DNS keywords.</p></li>
 <li><p><strong>POST:</strong> Adds a new keyword to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing monitored keyword.</p></li>
 <li><p><strong>DELETE:</strong> Removes a keyword from the monitored list.</p></li>
@@ -720,9 +771,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/dns_finder/dns_twisted/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of twisted DNS domains (typosquatting).</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of twisted DNS domains (typosquatting).</p></li>
 <li><p><strong>POST:</strong> Adds a new twisted DNS domain to the monitored list.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing twisted DNS domain in the monitored list.</p></li>
 <li><p><strong>DELETE:</strong> Removes a twisted DNS domain from the monitored list.</p></li>
@@ -733,9 +785,10 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/dns_finder/alert/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns a list of DNS alerts.</p></li>
+<li><p><strong>GET:</strong> Returns a paginated list of DNS alerts.</p></li>
 <li><p><strong>POST:</strong> Adds a new DNS alert.</p></li>
 <li><p><strong>PATCH:</strong> Updates an existing DNS alert.</p></li>
 <li><p><strong>DELETE:</strong> Removes a DNS alert.</p></li>
@@ -745,15 +798,14 @@ docker compose up
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">^api/dns_finder/misp/$</span></code></p>
 <ul class="simple">
-<li><p><strong>HTTP Method:</strong> POST, PATCH, DELETE</p></li>
+<li><p><strong>HTTP Method:</strong> POST</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>POST:</strong> Adds a new integration with MISP for DNS.</p></li>
-<li><p><strong>PATCH:</strong> Updates an existing integration with MISP for DNS.</p></li>
-<li><p><strong>DELETE:</strong> Removes an integration with MISP for DNS.</p></li>
+<li><p><strong>POST:</strong> Exports DNS findings to MISP threat intelligence platform.</p></li>
 </ul>
 </li>
-<li><p><strong>Usage:</strong> Used to get, add, update, or delete current integrations with MISP for DNS.</p></li>
+<li><p><strong>Usage:</strong> Used to integrate DNS findings with MISP.</p></li>
 </ul>
 </details> <br>
 <details>
@@ -761,58 +813,88 @@ docker compose up
 <p><code class="docutils literal notranslate"><span class="pre">^api/common/legitimate_domains/$</span></code></p>
 <ul class="simple">
 <li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>Pagination:</strong> Yes (100 items per page by default)</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
+<li><p><strong>GET:</strong> Returns a paginated list of legitimate company-owned domains.</p></li>
 <li><p><strong>POST:</strong> Export a domain from Website Monitoring to the legitimate domains list. Payload includes: domain_name, ticket_id, contact, expiry, repurchased (bool), comments.</p></li>
+<li><p><strong>PATCH:</strong> Updates an existing legitimate domain.</p></li>
+<li><p><strong>DELETE:</strong> Removes a legitimate domain.</p></li>
 </ul>
 </li>
 <li><p><strong>Usage:</strong> Add a company-approved domain for expiry/contact monitoring and tracking.</p></li>
 </ul>
-<br>
-<p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/summary/?type=weekly_summary</span></code></p>
+<p><code class="docutils literal notranslate"><span class="pre">^api/common/legitimate_domains/statistics/$</span></code></p>
 <ul class="simple">
-<li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns the weekly summary of threats detected by the watcher.</p></li>
+<li><p><strong>GET:</strong> Returns aggregated statistics for legitimate domains (total, repurchased, expired, expiring soon).</p></li>
 </ul>
 </li>
-<li><p><strong>Usage:</strong> Fetch and display the weekly summary.</p></li>
+<li><p><strong>Usage:</strong> Used to display dashboard statistics.</p></li>
 </ul>
-<br>
+<p><code class="docutils literal notranslate"><span class="pre">^api/common/legitimate_domains/misp/$</span></code></p>
+<ul class="simple">
+<li><p><strong>HTTP Method:</strong> POST</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
+<li><p><strong>Description:</strong></p>
+<ul>
+<li><p><strong>POST:</strong> Exports a legitimate domain to MISP threat intelligence platform.</p></li>
+</ul>
+</li>
+<li><p><strong>Usage:</strong> Used to integrate legitimate domain data with MISP.</p></li>
+</ul>
+</details> <br>
+<details>
+<summary>Threat Intelligence Summaries</summary> <br>
+<p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/summary/?type=weekly_summary</span></code></p>
+<ul class="simple">
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
+<li><p><strong>Description:</strong></p>
+<ul>
+<li><p><strong>GET:</strong> Returns the AI-generated weekly summary of threats detected by the watcher.</p></li>
+</ul>
+</li>
+<li><p><strong>Usage:</strong> Fetch and display the weekly threat intelligence report.</p></li>
+</ul>
 <p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/summary/?type=breaking_news</span></code></p>
 <ul class="simple">
-<li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
 <li><p><strong>GET:</strong> Returns breaking news / high-priority alerts detected by the watcher.</p></li>
 </ul>
 </li>
-<li><p><strong>Usage:</strong> Fetch and display breaking news.</p></li>
+<li><p><strong>Usage:</strong> Fetch and display breaking news alerts.</p></li>
 </ul>
-<br>
 <p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/summary/?type=trendy_word_summary&amp;keyword=&lt;keyword&gt;</span></code></p>
 <ul class="simple">
-<li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Returns the existing summary for a given trendy word (keyword).</p></li>
+<li><p><strong>GET:</strong> Returns the existing AI-generated summary for a given trendy word (keyword).</p></li>
 </ul>
 </li>
 <li><p><strong>Usage:</strong> Retrieve a previously generated summary for a keyword.</p></li>
 </ul>
-<br>
 <p><code class="docutils literal notranslate"><span class="pre">^api/threats_watcher/summary/by-keyword/&lt;keyword&gt;/</span></code></p>
 <ul class="simple">
-<li><p><strong>HTTP Method:</strong> GET, POST, PATCH, DELETE</p></li>
+<li><p><strong>HTTP Method:</strong> GET</p></li>
+<li><p><strong>Pagination:</strong> No</p></li>
 <li><p><strong>Description:</strong></p>
 <ul>
-<li><p><strong>GET:</strong> Trigger generation (or regeneration) of a summary for the specified keyword and return the generated result.</p></li>
+<li><p><strong>GET:</strong> Trigger generation (or regeneration) of an AI summary for the specified keyword and return the generated result.</p></li>
 </ul>
 </li>
-<li><p><strong>Usage:</strong> Request backend to generate a summary.</p></li>
+<li><p><strong>Usage:</strong> Request backend to generate a new threat intelligence summary.</p></li>
 </ul>
 </details> <br>
+</section>
 <section id="specific-details">
 <h3>Specific Details<a class="headerlink" href="#specific-details" title="Link to this heading"></a></h3>
 <p>To obtain detailed information about a specific item, such as an alert, a monitored site, or any other entity in the system, you can access its details by appending <code class="docutils literal notranslate"><span class="pre">/(?P&lt;pk&gt;[^/.]+)/$</span></code> to the end of the corresponding API URL.</p>

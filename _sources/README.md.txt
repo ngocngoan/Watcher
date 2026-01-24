@@ -375,11 +375,39 @@ Connect to the `/admin` page:
 - Select the **expiration** date.
 - Click on **SAVE**.
 
-
 You must pass your API keys via the Authorization header. It should be formatted as follows: **`Authorization: Token <API_KEY>`** where **<API_KEY>** refers to the full generated API key.
 
+### Pagination
 
-Below, you will find our 4 modules with their API functions:
+**Usage Examples:**
+
+```bash
+# Get first page with default size (100 items)
+GET /api/data_leak/keyword/
+
+# Get specific page
+GET /api/data_leak/keyword/?page=2
+
+# Customize page size (between 1 and 1000)
+GET /api/data_leak/keyword/?page=1&page_size=50
+
+# Maximum page size
+GET /api/data_leak/keyword/?page=1&page_size=1000
+```
+
+**Response Fields:**
+- `count`: Total number of items across all pages
+- `next`: URL to the next page (null if last page)
+- `previous`: URL to the previous page (null if first page)
+- `results`: Array containing the actual items for the current page
+
+**Notes:**
+- Pagination is implemented across all major API endpoints
+- Default page size is 100 items
+- Maximum page size is 1000 items
+- Most frontend actions (DataLeak.js, DnsFinder.js, etc.) are compatible with this pagination system. Note: Threats Watcher module does not support pagination.
+
+Below, you will find our 5 modules with their API functions:
 
 <details>
 
@@ -387,8 +415,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/threats_watcher/trendyword/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** No
 - **Description:** 
-  - **GET:** Returns a list of trending words monitored by the application.
+  - **GET:** Returns a paginated list of trending words monitored by the application.
   - **POST:** Adds a new trending word to the monitored list.
   - **PATCH:** Updates an existing trending word in the monitored list.
   - **DELETE:** Removes a trending word from the monitored list.
@@ -396,8 +425,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/threats_watcher/bannedword/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** No
 - **Description:** 
-  - **GET:** Returns a list of banned words monitored by the application.
+  - **GET:** Returns a paginated list of banned words monitored by the application.
   - **POST:** Adds a new banned word to the monitored list.
   - **PATCH:** Updates an existing banned word in the monitored list.
   - **DELETE:** Removes a banned word from the monitored list.
@@ -411,8 +441,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/data_leak/keyword/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of keywords monitored for data leaks.
+  - **GET:** Returns a paginated list of keywords monitored for data leaks.
   - **POST:** Adds a new keyword to the monitored list for data leaks.
   - **PATCH:** Updates an existing keyword in the monitored list for data leaks.
   - **DELETE:** Removes a keyword from the monitored list for data leaks.
@@ -420,8 +451,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/data_leak/alert/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of alerts related to data leaks.
+  - **GET:** Returns a paginated list of alerts related to data leaks.
   - **POST:** Adds a new alert for data leaks.
   - **PATCH:** Updates an existing alert for data leaks.
   - **DELETE:** Removes an alert related to data leaks.
@@ -435,8 +467,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/site_monitoring/site/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of sites monitored by the application.
+  - **GET:** Returns a paginated list of sites monitored by the application.
   - **POST:** Adds a new site to the monitored list.
   - **PATCH:** Updates an existing site in the monitored list.
   - **DELETE:** Removes a site from the monitored list.
@@ -444,8 +477,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/site_monitoring/alert/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of alerts related to site monitoring.
+  - **GET:** Returns a paginated list of alerts related to site monitoring.
   - **POST:** Adds a new alert related to site monitoring.
   - **PATCH:** Updates an existing alert related to site monitoring.
   - **DELETE:** Removes an alert related to site monitoring.
@@ -453,9 +487,17 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/site_monitoring/misp/$`
 - **HTTP Method:** POST
+- **Pagination:** No
 - **Description:** 
-  - **POST:** Adds a new integration with MISP.
-- **Usage:** Used to get, add, update, or delete current integrations with MISP.
+  - **POST:** Exports a monitored site to MISP threat intelligence platform.
+- **Usage:** Used to integrate site monitoring data with MISP.
+
+`^api/site_monitoring/site/statistics/$`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns aggregated statistics for site monitoring (total sites, malicious count, takedown requests, legal team cases).
+- **Usage:** Used to display dashboard statistics.
 
 </details> <br>
 
@@ -465,8 +507,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/dns_finder/dns_monitored/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of monitored DNS domains.
+  - **GET:** Returns a paginated list of monitored DNS domains.
   - **POST:** Adds a new DNS domain to the monitored list.
   - **PATCH:** Updates an existing monitored DNS domain.
   - **DELETE:** Removes a DNS domain from the monitored list.
@@ -474,8 +517,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/dns_finder/keyword_monitored/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of monitored DNS keywords.
+  - **GET:** Returns a paginated list of monitored DNS keywords.
   - **POST:** Adds a new keyword to the monitored list.
   - **PATCH:** Updates an existing monitored keyword.
   - **DELETE:** Removes a keyword from the monitored list.
@@ -483,8 +527,9 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/dns_finder/dns_twisted/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of twisted DNS domains (typosquatting).
+  - **GET:** Returns a paginated list of twisted DNS domains (typosquatting).
   - **POST:** Adds a new twisted DNS domain to the monitored list.
   - **PATCH:** Updates an existing twisted DNS domain in the monitored list.
   - **DELETE:** Removes a twisted DNS domain from the monitored list.
@@ -492,20 +537,20 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/dns_finder/alert/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:** 
-  - **GET:** Returns a list of DNS alerts.
+  - **GET:** Returns a paginated list of DNS alerts.
   - **POST:** Adds a new DNS alert.
   - **PATCH:** Updates an existing DNS alert.
   - **DELETE:** Removes a DNS alert.
 - **Usage:** Used to get, add, update, or delete current DNS alerts.
 
 `^api/dns_finder/misp/$`
-- **HTTP Method:** POST, PATCH, DELETE
+- **HTTP Method:** POST
+- **Pagination:** No
 - **Description:** 
-  - **POST:** Adds a new integration with MISP for DNS.
-  - **PATCH:** Updates an existing integration with MISP for DNS.
-  - **DELETE:** Removes an integration with MISP for DNS.
-- **Usage:** Used to get, add, update, or delete current integrations with MISP for DNS.
+  - **POST:** Exports DNS findings to MISP threat intelligence platform.
+- **Usage:** Used to integrate DNS findings with MISP.
 
 </details> <br>
 
@@ -515,44 +560,63 @@ Below, you will find our 4 modules with their API functions:
 
 `^api/common/legitimate_domains/$`
 - **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
 - **Description:**
+  - **GET:** Returns a paginated list of legitimate company-owned domains.
   - **POST:** Export a domain from Website Monitoring to the legitimate domains list. Payload includes: domain_name, ticket_id, contact, expiry, repurchased (bool), comments.
+  - **PATCH:** Updates an existing legitimate domain.
+  - **DELETE:** Removes a legitimate domain.
 - **Usage:** Add a company-approved domain for expiry/contact monitoring and tracking.
 
-<br>
-
-`^api/threats_watcher/summary/?type=weekly_summary`
-- **HTTP Method:** GET, POST, PATCH, DELETE
+`^api/common/legitimate_domains/statistics/$`
+- **HTTP Method:** GET
+- **Pagination:** No
 - **Description:**
-  - **GET:** Returns the weekly summary of threats detected by the watcher.
-- **Usage:** Fetch and display the weekly summary.
+  - **GET:** Returns aggregated statistics for legitimate domains (total, repurchased, expired, expiring soon).
+- **Usage:** Used to display dashboard statistics.
 
-<br>
-
-`^api/threats_watcher/summary/?type=breaking_news`
-- **HTTP Method:** GET, POST, PATCH, DELETE
+`^api/common/legitimate_domains/misp/$`
+- **HTTP Method:** POST
+- **Pagination:** No
 - **Description:**
-  - **GET:** Returns breaking news / high-priority alerts detected by the watcher.
-- **Usage:** Fetch and display breaking news.
-
-<br>
-
-`^api/threats_watcher/summary/?type=trendy_word_summary&keyword=<keyword>`
-- **HTTP Method:** GET, POST, PATCH, DELETE
-- **Description:**
-  - **GET:** Returns the existing summary for a given trendy word (keyword).
-- **Usage:** Retrieve a previously generated summary for a keyword.
-
-<br>
-
-`^api/threats_watcher/summary/by-keyword/<keyword>/`
-- **HTTP Method:** GET, POST, PATCH, DELETE
-- **Description:**
-  - **GET:** Trigger generation (or regeneration) of a summary for the specified keyword and return the generated result.
-- **Usage:** Request backend to generate a summary.
+  - **POST:** Exports a legitimate domain to MISP threat intelligence platform.
+- **Usage:** Used to integrate legitimate domain data with MISP.
 
 </details> <br>
 
+<details>
+
+<summary>Threat Intelligence Summaries</summary> <br>
+
+`^api/threats_watcher/summary/?type=weekly_summary`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns the AI-generated weekly summary of threats detected by the watcher.
+- **Usage:** Fetch and display the weekly threat intelligence report.
+
+`^api/threats_watcher/summary/?type=breaking_news`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns breaking news / high-priority alerts detected by the watcher.
+- **Usage:** Fetch and display breaking news alerts.
+
+`^api/threats_watcher/summary/?type=trendy_word_summary&keyword=<keyword>`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns the existing AI-generated summary for a given trendy word (keyword).
+- **Usage:** Retrieve a previously generated summary for a keyword.
+
+`^api/threats_watcher/summary/by-keyword/<keyword>/`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Trigger generation (or regeneration) of an AI summary for the specified keyword and return the generated result.
+- **Usage:** Request backend to generate a new threat intelligence summary.
+
+</details> <br>
 
 ### Specific Details
 
