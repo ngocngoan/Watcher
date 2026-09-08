@@ -2,25 +2,17 @@ Developed by [Thales Group CERT](https://github.com/thalesgroup-cert).
 
 ---
 
-> ## ⚠️ Important Notice: Docker Hub Migration Required
-> **Docker Hub support is deprecated and will be completely removed on February 28, 2026**
-> 
-> **Action Required:** All users must migrate to GitHub Container Registry (GHCR) before this date.
-> 
-> **New default registry:** `ghcr.io/thalesgroup-cert/watcher:latest`
-> 
-> If you are currently using Docker Hub (`felix83000/watcher`), please update your `docker-compose.yml` file to use GHCR instead. See the [Installation](#install-watcher) section for details.
-
----
-
 # Install Watcher
 
 ## Prerequisites
 - [Install docker](https://docs.docker.com/install/)
 
 ## Launch watcher
+
+### With docker command
 - Grab the `docker-compose.yml`, `.env` files and `Searx` directory (keep the directory structure).
-- According to your existing infrastructure you may need to configure **Watcher settings** using the `.env` file ([Static configuration](#static-configuration)). 
+- According to your existing infrastructure you may need to configure **Watcher settings** using the `.env` file ([Static configuration](#static-configuration)).
+- The application uses **SearxNG** as the meta search engine.
 - `docker compose up`
 
 This should run Docker containers.
@@ -31,14 +23,39 @@ Please wait until you see:
     watcher          | Performing system checks...
     watcher          | 
     watcher          | System check identified no issues (0 silenced).
-    watcher          | November 03, 2025 - 10:57:42
-    watcher          | Django version 5.2.7, using settings 'watcher.settings'
+    watcher          | May 11, 2026 - 12:26:52
+    watcher          | Django version 6.0.5, using settings 'watcher.settings'
     watcher          | Starting development server at http://0.0.0.0:9002/
     watcher          | Quit the server with CONTROL-C.
 
 - Try to access Watcher on http://0.0.0.0:9002 or http://yourserverip:9002.
 - `CONTROL-C`
 - `docker compose down` to stop all containers.
+
+### Simplify method
+Use the deployment helper commands from the repository root:
+
+Initialize **your local configuration once**: `cp .env.example .env`
+
+**And after:** 
+
+    cd ../deployment
+    make init
+    make up
+
+**On first run**:
+
+    make migrate
+    make superuser
+    make populate-db
+
+Then **access Watcher on**:
+
+- http://0.0.0.0:9020 (default deployment port)
+- or your configured domain/port from `deployment/.env`
+
+Deployment configuration is centralized in `deployment/.env` (generated from `deployment/.env.example`).
+Set your secrets there, especially `DJANGO_SECRET_KEY`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_ROOT_PASSWORD`.
 
 ### Migrate
 Updates the state of the database in accordance with all current models and migrations. Migrations, their relationships 
@@ -72,7 +89,9 @@ You just have to wait for Watcher to crawl the Internet. This will happen every 
 ## Static configuration
 Most of the settings can be modified from the `/admin` page.
 
-There are other settings located in the `.env` file that you can configure. 
+There are other settings located in the `.env` file that you can configure.
+
+Many of the external-integration settings below (SMTP, Slack, MISP, TheHive, Citadel, CyberWatch feeds) can also be viewed, overridden, and tested live from the [Connectors](#connectors) page, without editing the `.env` file.
 
 ### Production Settings [Important]
 
@@ -140,6 +159,85 @@ Now, you can restart your instance and the parameters will be taken into account
 
     docker compose down
     docker compose up
+
+### SSO / OpenID Connect Settings
+
+Watcher supports federated login via any **OpenID Connect (OIDC)** provider (Keycloak, Azure AD...)
+
+The login page behaviour is controlled by a single variable `LOGIN_MODE`:
+
+| Value | Effect |
+|---|---|
+| `form_only` | Username / password form only - **default** |
+| `sso_only` | SSO button only, the credential form is hidden |
+| `both` | SSO button **and** the credential form are both shown |
+
+In the `.env` file:
+
+    # SSO / OIDC Setup
+    # Controls the login page: form_only | sso_only | both
+    LOGIN_MODE=form_only
+    OIDC_COMPANY_NAME=
+    # Required when LOGIN_MODE is 'sso_only' or 'both'
+    OIDC_RP_CLIENT_ID=
+    OIDC_RP_CLIENT_SECRET=
+    OIDC_OP_AUTHORIZATION_ENDPOINT=
+    OIDC_OP_TOKEN_ENDPOINT=
+    OIDC_OP_USER_ENDPOINT=
+    OIDC_OP_JWKS_ENDPOINT=
+    OIDC_OP_ISSUER=
+    # Optional - set to False to only allow SSO login for pre-existing users (default: True)
+    OIDC_CREATE_USER=True
+
+Set `LOGIN_MODE=sso_only` (or `both`) and fill in the OIDC credentials to activate the SSO login button and the OIDC routes.
+
+`OIDC_COMPANY_NAME` is optional - when set it is displayed on the SSO button (e.g. `Sign in with Acme Corp`).
+
+`OIDC_CREATE_USER` controls whether a new local account is automatically created the first time someone logs in via SSO. Set it to `False` to require an admin to create the account first - unrecognized SSO users are then redirected back to the login page instead of being auto-provisioned.
+
+The callback URL to register with your identity provider is:
+
+    https://<your-domain>/api/auth/oidc/callback/
+
+Now, you can restart your instance and the parameters will be taken into account:
+
+    docker compose down
+    docker compose up
+
+### CyberWatch Settings
+
+Configure the external threat intelligence feed endpoints used by the CyberWatch module. All variables have working defaults and can be left unset.
+
+In the `.env` file:
+
+    # CyberWatch Setup
+    CYBER_WATCH_CVE_API_URL=https://cve.circl.lu/api/last
+    CYBER_WATCH_RANSOMWARE_GROUPS_URL=
+    CYBER_WATCH_RANSOMWARE_VICTIMS_URL=
+    CYBER_WATCH_RANSOMLOOK_GROUPS_URL=
+    CYBER_WATCH_RANSOMLOOK_RECENT_URL=
+    CYBER_WATCH_RANSOMLOOK_ACTORS_URL=
+
+Now, you can restart your instance and the parameters will be taken into account:
+
+    docker compose down
+    docker compose up
+
+### Configurable Help Button
+
+The header help quick-link is configurable via environment variables:
+
+    # Help button
+    WATCHER_HELP_BUTTON_LABEL=API Docs
+    WATCHER_HELP_BUTTON_URL=/api/docs/
+
+### Corporate Proxy / Custom CA Certificates
+
+If Watcher runs behind a corporate proxy that intercepts or re-signs HTTPS traffic (SSL/TLS inspection), or must trust an internal Certificate Authority for internal services, drop the CA certificate(s) in `deployment/certificates/` alongside the existing `rootcafile.pem`.
+
+The `watcher` container merges every CA mounted there with the system's public trust store at startup, via the standard `update-ca-certificates` tool, into `/etc/ssl/certs/ca-certificates.crt` — the file `REQUESTS_CA_BUNDLE` points to. This **extends** the trust store instead of replacing it, so public HTTPS endpoints (RSS feeds, CVE APIs, ransomware.live...) keep working alongside your internal ones.
+
+See [deployment/README.md](https://github.com/thalesgroup-cert/Watcher/blob/master/deployment/README.md#corporate-proxy--custom-ca-certificates) for the exact `compose_apps.yaml` volume configuration and how to mount more than one CA file.
 
 ## Troubleshooting
 ### Remove the database
@@ -213,7 +311,7 @@ To configure Email, you need the following variables, in the `.env` file:
 
 Follow these steps to get the required information:
 
-1. Choose your email provider (example: Gmail, Outlook...).
+1. Choose your email provider (example: Gmail, Outlook...)
 2. Go to the email provider’s settings and generate the **SMTP configuration**:
    - For **Gmail**, detailed instructions can be found in [Google's SMTP documentation](https://support.google.com/a/answer/176600?hl=en).
    - For **Outlook**, you can refer to the [Outlook SMTP documentation](https://support.microsoft.com/en-us/office/pop-imap-and-smtp-settings-for-outlook-com-d088b986-291d-42b8-9564-9c414e2aa040) for more information.
@@ -312,7 +410,7 @@ Now, you can restart your instance and the parameters will be taken into account
     docker compose up
 
 ## Add your RSS source to Threats Detection
-As you know this feature allow the detection of emerging vulnerabilities, malwares using social networks & other RSS sources (www.cert.ssi.gouv.fr, www.cert.europa.eu, www.us-cert.gov, www.cyber.gov.au...).
+As you know this feature allow the detection of emerging vulnerabilities, malwares using social networks & other RSS sources (www.cert.ssi.gouv.fr, www.cert.europa.eu, www.us-cert.gov, www.cyber.gov.au...)
 
 Watcher currently provides hundreds of RSS cybersecurity sources ([Populate default RSS sources](#populate-your-database)).
 
@@ -340,7 +438,7 @@ The **Legitimate Domains** module helps track company-approved domains, monitor 
 2. Click **Add Legitimate Domain**
 3. Fill in the following fields:
    - **Domain**: Company-owned domain (e.g., `company.com`)
-   - **Legitimacy**: Classification status (Unknown, Legitimate, etc.)
+   - **Legitimacy**: Classification status (Unknown, Legitimate...)
    - **Domain Expiry**: Expiration date (YYYY-MM-DD)
    - **Registrar**: Current registrar name
    - **Repurchase**: Mark if domain needs renewal
@@ -405,9 +503,18 @@ GET /api/data_leak/keyword/?page=1&page_size=1000
 - Pagination is implemented across all major API endpoints
 - Default page size is 100 items
 - Maximum page size is 1000 items
-- Most frontend actions (DataLeak.js, DnsFinder.js, etc.) are compatible with this pagination system. Note: Threats Watcher module does not support pagination.
+- Most frontend actions (DataLeak.js, DnsFinder.js...) are compatible with this pagination system. Note: Threats Watcher module does not support pagination.
 
-Below, you will find our 5 modules with their API functions:
+### Interactive API Documentation
+
+Watcher ships with a fully auto-generated REST API documentation powered by **drf-spectacular**.
+
+- **Swagger UI** - available at `/api/docs/` - interactive interface to browse every endpoint, inspect request/response schemas, and execute authenticated calls directly from the browser.
+- **OpenAPI 3 schema** - downloadable at `/api/schema/` (JSON/YAML) for import into Postman, Insomnia, or any API client.
+
+All six modules are fully covered, including the `/statistics/` endpoints and the CyberWatch Watch Rule engine.
+
+Below, you will find our 6 modules with their API functions:
 
 <details>
 
@@ -586,6 +693,57 @@ Below, you will find our 5 modules with their API functions:
 
 <details>
 
+<summary>CyberWatch</summary> <br>
+
+`^api/cyber_watch/cves/$`
+- **HTTP Method:** GET
+- **Pagination:** Yes (100 items per page by default)
+- **Description:**
+  - **GET:** Returns a paginated list of CVE alerts fetched from cve.circl.lu.
+- **Usage:** Used to display CVE monitoring data in the CyberWatch dashboard.
+
+`^api/cyber_watch/cves/statistics/$`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns aggregated CVE statistics (total, critical, high, new today).
+- **Usage:** Used to display the CVEStats KPI panel.
+
+`^api/cyber_watch/ransomware/victims/$`
+- **HTTP Method:** GET
+- **Pagination:** Yes (100 items per page by default)
+- **Description:**
+  - **GET:** Returns a paginated list of ransomware victims fetched from ransomware.live and ransomlook.io.
+- **Usage:** Used to display victim data in the CyberWatch dashboard.
+
+`^api/cyber_watch/ransomware/statistics/$`
+- **HTTP Method:** GET
+- **Pagination:** No
+- **Description:**
+  - **GET:** Returns aggregated ransomware statistics (total victims, groups, new this week).
+- **Usage:** Used to display the RansomwareStats KPI panel.
+
+`^api/cyber_watch/watch-rules/$`
+- **HTTP Method:** GET, POST, PATCH, DELETE
+- **Pagination:** Yes (100 items per page by default)
+- **Description:**
+  - **GET:** Returns all defined watch rules.
+  - **POST:** Creates a new keyword-based watch rule scoped to CVEs, ransomware victims, or both.
+  - **PATCH:** Updates an existing watch rule.
+  - **DELETE:** Removes a watch rule.
+- **Usage:** Manage keyword alert rules from the CyberWatch dashboard.
+
+`^api/cyber_watch/watch-rule-hits/$`
+- **HTTP Method:** GET
+- **Pagination:** Yes (100 items per page by default)
+- **Description:**
+  - **GET:** Returns all recorded rule hits (deduplicated matches between rules and incoming data).
+- **Usage:** Display rule match history in the CyberWatch module.
+
+</details> <br>
+
+<details>
+
 <summary>Threat Intelligence Summaries</summary> <br>
 
 `^api/threats_watcher/summary/?type=weekly_summary`
@@ -638,6 +796,7 @@ Watcher provides automatic integration with [TheHive](https://strangebee.com/the
 - **Data Leak**: Automatically creates alerts when data leaks are detected via keywords.
 - **Website Monitoring**: Automatically creates alerts in TheHive when site changes are detected.
 - **DNS Finder**: Automatically exports twisted DNS findings and certificate transparency alerts.
+- **CyberWatch**: Automatically pushes CVE alerts and ransomware victim matches (rule hits) as tagged observables.
 
 ### TheHive Integration Features
 
@@ -719,9 +878,88 @@ To add **several** words:
 - Click on **Action** dropdown.
 - Select "**Delete & Blocklist selected trendy words**".
 
+## CyberWatch Module
+
+CyberWatch is a standalone threat intelligence module that continuously fetches, correlates, and surfaces external threat data directly inside Watcher.
+
+### CVE Monitoring
+
+- Fetches CVEs from [cve.circl.lu](https://cve.circl.lu) on a 30-minute schedule.
+- Stores CVE ID, severity, CVSS score, full description, and external references.
+- Dedicated statistics panel with KPI cards for total CVEs, critical/high severity counts, and new items today.
+
+### Ransomware Intelligence
+
+- Pulls ransomware group and victim data from [ransomware.live](https://ransomware.live) and [ransomlook.io](https://ransomlook.io).
+- Stores victim name, ransomware group, country, sector, and attack date.
+
+### Watch Rule Engine
+
+Users can define keyword-based rules scoped to CVEs, ransomware victims, or both:
+
+1. Navigate to `/cyber_watch`.
+2. Click **Add Watch Rule**.
+3. Enter a keyword and choose the scope (CVEs / victims / both).
+4. Matches are recorded automatically and deduplicated.
+
+Notifications fire across all four channels (Email, Slack, Citadel, TheHive) for each rule hit.
+
+## UDRP Tracking
+
+Automated UDRP (Uniform Domain-Name Dispute-Resolution Policy) case monitoring integrated into Site Monitoring.
+
+- Two new fields on monitored sites: `udrp_status` (`pending` / `won` / `lost` / `unknown`) and `udrp_last_checked`.
+- A scheduled job queries the WIPO UDRP database every 6 hours for every site where `legal_team = True`.
+- When a case is **won**, the domain is automatically transferred to Legitimate Domains.
+- Notifications fire on all four channels (TheHive, Slack, Citadel, Email) when a decision is detected or changes.
+
+## User Profile Page
+
+A dedicated `/profile` route provides a centralised settings and preferences hub.
+
+### Account Settings
+- Displays user avatar, username, email, role badges (Superuser, Staff, groups), and group permissions.
+- Direct link to the password change page and logout button.
+
+### Theme Picker
+- All available themes displayed as cards with preview thumbnails.
+- The active theme is highlighted; selecting a new one applies it immediately and persists via `localStorage`.
+
+### Dashboard Layout Manager
+- All six module dashboards listed with a live **MiniGrid** preview of the current panel arrangement.
+- Each card shows the active preset name, panel count, and available presets.
+- Clicking a card opens a **Layout Presets & Editor** modal:
+  - *Presets* tab - named ready-made layouts (Default, Compact, Analytics).
+  - *Custom Editor* tab - free-form drag-and-drop editor.
+- A *Reset to Default* button restores the module's default preset.
+- Layout changes made in the profile page are reflected immediately on open dashboards without a page reload.
+
+## Connectors
+
+A dedicated `/connectors` page (**superuser only**) centralises configuration and health-check testing for every external integration Watcher can talk to: SMTP, Slack, Citadel, TheHive, MISP, LDAP, SSO/OIDC, CertStream, SearxNG, the CyberWatch feeds (CVE, Ransomware.live, RansomLook), WIPO UDRP, and the primary MySQL database.
+
+### How it works
+
+- **At startup**, a connector's fields are seeded from the corresponding `.env` / `settings.py` variables described in [Static configuration](#static-configuration) the first time they're read - nothing changes for existing deployments, and a connector that's already configured via environment variables needs no action here.
+- **Editing a value** from the dashboard (click **Edit** on a connector's card) stores an override in the database, which takes effect immediately across the whole app - not just this page's own **Test** button. SMTP, Slack, Citadel, TheHive, MISP, CertStream, SearxNG, and the CyberWatch feeds all read their live configuration through this same override system, so changing a value here changes real app behaviour immediately, with no restart required.
+- **Once a field has been saved here - even cleared to empty - it stops following `.env`/`settings.py`, for good.** Clearing a field is a deliberate "leave this blank" action, not a way to fall back to the environment default. Each field shows a **"From .env"** or **"Manually set"** badge so you always know which state it's in, and a **reset button** appears on manually-set fields to drop the override and resume following `.env`/`settings.py` live.
+- **Sensitive fields** (passwords, tokens, API keys) are encrypted at rest with Django's signing framework and shown masked by default. Click the eye icon to decrypt and reveal the stored value, or the crossed-out eye to hide it again.
+- **Test** runs a real connectivity check (an SMTP handshake, an authenticated API call...) using the values currently saved for that connector, and reports success or failure directly on its card.
+- **Two independent statuses** are shown per connector: **Configured** / **Incomplete** / **Disabled** reflects whether the required fields are filled in, while **Healthy** / **Unhealthy** / **Not tested yet** reflects the outcome of the last connectivity test. A connector can be fully configured and still unhealthy if the external service itself is unreachable.
+- **A scheduled job tests every connector automatically every Monday at 06:00.** A Pending Action alert is only queued for connectors marked **Configured** that fail - a connector nobody has set up yet is still tested (to keep its health badge current) but doesn't raise noise. Repeated failures for the same connector don't create duplicate alerts - the existing pending one has to be resolved first. Manually clicking **Test** never creates an alert; only the scheduled run does.
+- Each connector shows its **plugin version** (e.g. `v1.0.0`) - a static, manually-maintained value for the connector definition itself, unrelated to the version of the external service it talks to.
+- **MySQL, LDAP, and OIDC/SSO are read-only/informational**: their configuration always comes from `settings.py` and can't be changed from this page. For LDAP and OIDC this isn't a UI limitation - Django builds its authentication backends from `settings.py` once, at process startup, so an override wouldn't take effect without a restart anyway.
+
+### Dashboard
+
+- KPI cards summarise how many connectors are **Configured**, **Incomplete**, or **Disabled**, based on which of their required fields are currently filled.
+- Search and filter connectors by name, category, configuration status, or health status.
+- Toggle **Group by category** to organise the grid by theme (Notifications, Threat Intelligence, Authentication, Database...) instead of a flat list.
+
+
 ## AI-Powered Threat Intelligence
 
-Watcher v3.0 introduces **AI-driven threat analysis** using Hugging Face transformers for automated threat detection and summarization.
+Watcher v3.4.0 uses **AI-driven threat analysis** powered by Hugging Face transformers for automated threat detection and summarization.
 
 ### Breaking News Detection
 
@@ -774,35 +1012,36 @@ Watcher uses BERT-based NER for threat intelligence extraction:
 
 ### Theme Switcher
 
-Watcher offers **5 pre-built themes** with persistent user preferences:
+Watcher offers **15 pre-built Bootswatch themes** with persistent user preferences, accessible from the [User Profile](#user-profile-page) page:
 
-1. **Darkly** (Default): Modern dark theme
-2. **Flatly**: Clean light theme
-3. **Cyborg**: Cyberpunk-inspired dark theme
-4. **Superhero**: Bold dark theme with vibrant accents
-5. **Brite**: High-contrast light theme
+**Dark Themes:** Darkly (default), Cyborg, Superhero, Slate, Solar
+
+**Light Themes:** Flatly, Brite, Cosmo, Lux, Minty, Morph, Sandstone, United, Yeti
 
 **How to Change Theme**:
-1. Click on **User Profile** (top-right)
-2. Select **Theme Switcher**
-3. Choose your preferred theme
-4. Preference saved in browser localStorage
+1. Click on **User Profile** (top-right corner)
+2. Go to the **Themes** section
+3. Click on the desired theme card, applied instantly site-wide
 
 ### Resizable Dashboard Panels
 
-All modules now support **user-customizable panel widths**:
+All six module dashboards use a free-form grid layout via the shared `PanelGrid` component:
 
-- **Drag & Drop**: Resize panels by dragging dividers
-- **Persistent Layout**: Saved per-user, per-module
-- **Reset Option**: Restore default layout via settings
+- **Drag & Drop**: Freely move and resize panels within each dashboard.
+- **Preset Layouts**: Choose from named presets (Default, Compact, Analytics) from the [User Profile](#user-profile-page) page.
+- **Custom Editor**: Build your own layout with a full drag-and-drop editor.
+- **Persistent Layout**: Saved per-user, per-module via `localStorage`.
+- **Reset Option**: Restore the active preset or default layout at any time.
 
 ### Advanced Table Filters
 
-All data tables include **enhanced filtering**:
+All data tables include **enhanced filtering** with preference persistence:
 
-1. **Filter Builder**: Click filter icon to add conditions
-2. **Save Filter Sets**: Name and save custom filters
-3. **Quick Apply**: Load saved filters with one click
+1. **Filter Builder**: Click the filter icon to add conditions.
+2. **Save Filter Sets**: Name and save custom filter configurations.
+3. **Quick Apply**: Load saved filters with one click.
+4. **Adaptive Pagination**: Items-per-page auto-adjusts to fill available panel height.
+5. **Persistent Preferences**: Filter visibility and page size are restored on next load.
 
 ## Archived Alerts
 Once you have processed an alert, you can archive it.
@@ -824,37 +1063,35 @@ To archived **several** alerts:
 
 Verify that your local files `/.env`, `/docker-compose.yml` and `/Searx/` are **up-to-date**.
 
-## Migrate from Docker Hub to GHCR (Required for all users)
-
-If you are still using the old Docker Hub image (`felix83000/watcher`), you **must** update your `docker-compose.yml`:
-
-**Old (DEPRECATED):**
-```yaml
-image: felix83000/watcher:latest
-```
-
-**New (REQUIRED):**
-```yaml
-image: ghcr.io/thalesgroup-cert/watcher:latest
-```
+> **Note:** Watcher uses the official image from **GitHub Container Registry (GHCR)**: `ghcr.io/thalesgroup-cert/watcher:latest`
 
 ## Update Process
 
 To update Watcher image please follow the instructions below:
 
-- Stop all containers: `docker compose down`
-- Remove the old docker images: 
+- Stop all containers:
+
   ```bash
-  # If migrating from Docker Hub
-  docker rmi felix83000/watcher
-  
-  # If already using GHCR
-  docker rmi ghcr.io/thalesgroup-cert/watcher
-  
-  # Also remove Searx image
-  docker rmi searx/searx
+    docker compose down
   ```
-- Pull the newer docker images: `docker compose up`
+- Remove the old docker images:
+
+  ```bash
+    docker rmi ghcr.io/thalesgroup-cert/watcher:latest
+    docker rmi mysql:8.0.40
+    docker rmi searxng/searxng:latest
+    docker rmi 0rickyy0/certstream-server-go:latest
+  ```
+- Pull the newer docker images:
+
+ ```bash
+    docker compose pull
+  ```
+- Start the containers:
+
+  ```bash
+    docker compose up -d
+  ```
 
 This will update the Watcher project.
 
@@ -890,12 +1127,32 @@ If you want to modify the project and Pull Request (PR) your work, you will need
 
 ## Open a Pull Request (PR) to contribute to this project
 - Fork the official Watcher repository
-- Install `Git`
-- Open a terminal: `git clone <your_forked_repository.git>`
-- Switch to the dev branch: `git checkout -b feature/<name_of_the_new_feature>`
-- Make your changes on the working files and then: `git add *`
-- Add a commit message and description: `git commit -m "Title" -m "Description"`
-- Publish the changes: `git push origin feature/<name_of_the_new_feature>`
+- Install <a href="https://git-scm.com/install/linux" target="_blank" rel="noopener noreferrer">Git</a>
+- Open a terminal: 
+
+  ```bash
+    git clone <your_forked_repository.git>
+  ```
+- Switch to the dev branch:
+  
+  ```bash
+    git checkout -b feature/<name_of_the_new_feature>
+  ```
+- Make your changes on the working files and then:
+  
+  ```bash
+    git add *
+  ``` 
+- Add a commit message and description: 
+
+  ```bash
+    git commit -m "Title" -m "Description"
+  ```
+- Publish the changes:
+
+  ```bash
+    git push origin feature/<name_of_the_new_feature>
+  ```
 - Back to GitHub on your forked repository, click Under Contribute > Open Pull Request and then Confirm the operation
 - Done! Your work will be reviewed by the team! 
 
@@ -904,61 +1161,119 @@ Use a Linux server, we recommend the use of a Virtual Machine (Ubuntu 20.04 and 
 
 Then, follow the steps below:
 
-- **Update and upgrade your machine:** `sudo apt update && sudo apt upgrade -y`
-- **Install Python and Node.js:** `sudo apt install python3 python3-pip -y` **&** `sudo apt install nodejs -y`
-- **Create and activate a Python virtual environment:** `python3 -m venv .venv |source .venv/bin/activate`
-- **Pull Watcher code:** `git clone <your_forked_repository.git>`
-- **Move to the following directory:** `cd Watcher/Watcher`
-- **Install** `python-ldap` **dependencies:** `sudo apt install -y libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev`
-- **Install** `mysqlclient` **dependency:** `sudo apt install default-libmysqlclient-dev`
-- **Install Rust (for tokenizers, etc)** `curl https://sh.rustup.rs -sSf | sh -s -- -y |source $HOME/.cargo/env` 
-- **Install Python dependencies:** `pip3 install -r requirements.txt`
-- **Install Torch and Torchvision dependencies:** `pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0`
-- **Install NLTK/punkt dependency:** `python3 ./nltk_dependencies.py`
-     - If you have a proxy, you can configure it in `nltk_dependencies.py` script.  
+- **Update and upgrade your machine:** 
+  
+  ```bash
+  sudo apt update && sudo apt upgrade -y
+- **Install Python and Node.js:**
+
+  ```bash
+  sudo apt install python3 python3-pip -y 
+  sudo apt install nodejs -y
+- **Create and activate a Python virtual environment:**
+
+  ```bash
+  python3 -m venv .venv |source .venv/bin/activate
+- **Pull Watcher code:**
+
+  ```bash
+  git clone <your_forked_repository.git>
+- **Move to the following directory:**
+  
+  ```bash
+  cd Watcher/Watcher
+- **Install** `python-ldap` **dependencies:**
+
+  ```bash
+  sudo apt install -y libsasl2-dev python-dev-is-python3 libldap2-dev libssl-dev
+- **Install** `mysqlclient` **dependency:**
+
+  ```bash
+  sudo apt install default-libmysqlclient-dev
+- **Install Rust (for tokenizers, etc)**
+
+  ```bash
+  curl https://sh.rustup.rs -sSf | sh -s -- -y |source $HOME/.cargo/env 
+- **Install Python dependencies:**
+
+  ```bash
+  pip3 install -r requirements.txt
+- **Install Torch and Torchvision dependencies:**
+
+  ```bash
+  pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0 torchaudio==2.11.0
+- **Install NLTK/punkt dependency:** 
+  
+  ```bash
+    python3 ./nltk_dependencies.py
+  ```
+    
+    - If you have a proxy, you can configure it in `nltk_dependencies.py` script.
 - **Install Node.js dependencies:**
-     - `sudo apt install npm -y`
-     - `npm install`
+    ```bash   
+    sudo apt install npm -y
+    npm install
 - **Install MySQL:**
-     - `sudo apt install mysql-server -y`
-     - `sudo mysql_secure_installation`
-          - Enter root password.
-          - You may now enter `Y` and `ENTER`. Accept all fields. This will remove some anonymous users and the test database, 
+
+  ```bash
+  sudo apt install mysql-server -y
+  sudo mysql_secure_installation
+  ```
+  - Enter root password.
+  - You may now enter `Y` and `ENTER`. Accept all fields. This will remove some anonymous users and the test database,  
     disable remote root logins, and load these new rules so that MySQL immediately respects any changes made.
 
 **Create & Configure Watcher database:**
-
+  ```sql
     sudo mysql 
     CREATE USER 'watcher'@'localhost' IDENTIFIED BY 'Ee5kZm4fWWAmE9hs!';
     GRANT ALL PRIVILEGES ON *.* TO 'watcher'@'localhost' WITH GRANT OPTION;
     CREATE DATABASE db_watcher;
     use db_watcher;
     exit
-    systemctl status mysql.service
+  ```
 
-- `cd Watcher/watcher`
+  ```bash
+  systemctl status mysql.service
+  ```
+
+```bash
+  cd Watcher/Watcher
+  ```
 
 In `settings.py` change `HOST` variable to `localhost`:
 
+  ```python
     DATABASES = {
-       'default': {
-           'ENGINE': 'django.db.backends.mysql',
-           'CONN_MAX_AGE': 3600,
-           'NAME': 'db_watcher',
-           'USER': 'watcher',
-           'PASSWORD': 'Ee5kZm4fWWAmE9hs!',
-           'HOST': 'localhost',
-           'PORT': '3306',
-           'OPTIONS': {
-               'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-           },
-       }
+      'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'CONN_MAX_AGE': 3600,
+        'NAME': 'db_watcher',
+        'USER': 'watcher',
+        'PASSWORD': 'Ee5kZm4fWWAmE9hs!',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+          'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+      }
     }
+  ```
 
 - <span style="color:red">**[IMPORTANT]** When **commit** put `HOST` variable back to `db_watcher`</span>
-- `cd ..`
-- **[Migrate](#migrate) the database:** `python3 manage.py migrate`
-- **Run Watcher:** `python3 manage.py runserver`
+ ```bash
+    cd ..
+  ```
+- **[Migrate](#migrate) the database:** 
+  
+  ```bash
+  python3 manage.py migrate
+  ```
+- **Run Watcher:**
+
+  ```bash
+  python3 manage.py runserver
+  ```
 
 ## Deploy a simple SMTP server to test the email notifications
 If you are working on a test environment and willing to have email alerts, here is a simple way to configure the SMTP settings to make it work.
@@ -976,7 +1291,7 @@ Watcher includes comprehensive unit tests to ensure code quality and reliability
 
 ### Test Coverage & Technologies
 
-The test suite covers all 5 main modules of Watcher:
+The test suite covers all 6 main modules of Watcher:
 
 - **Back-End Tests**: Python's standard unittest module
   - `common/tests.py`
@@ -984,7 +1299,7 @@ The test suite covers all 5 main modules of Watcher:
   - Module-specific test files for each component
 
 - **Front-End Tests**: Cypress framework for JavaScript testing
-  - Cypress tests for all 5 modules
+  - Cypress tests for all 6 modules
   - End-to-end testing scenarios
 
 ### Automated CI/CD Testing
@@ -1118,7 +1433,7 @@ There are several commands which you will use to interact with migrations and Dj
 - `sqlmigrate`, which displays the SQL statements for a migration.
 - `showmigrations`, which lists a project’s migrations and their status.
 
-### Change a model (adding a field, deleting a model, etc.)
+### Change a model (adding a field, deleting a model...)
 When you are **making a change to a model**, for instance, adding a new field to: **/Watcher/Watcher/data_leak/models.py**
 Then, you need to create a new migration based on the changes you have made:
 - Go to **/Watcher/Watcher/** and run this command: `python3 manage.py makemigrations`
